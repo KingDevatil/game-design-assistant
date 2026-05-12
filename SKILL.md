@@ -143,22 +143,37 @@ references/game_context/
 ```
 # 用户工作区下的项目知识包（与 Skill 完全分离）
 # 实际路径由 user_state.yaml 中的 project_knowledge_path 指定
-# 示例结构：
+# 可自由组织二级目录分类，示例如下：
 {user_workspace}/
 └── {project_name}/
-    ├── INDEX.md              # 项目知识包入口索引
-    ├── tone_and_voice.md     # Tone & Voice 规范
-    ├── attribute_system.md   # 属性体系
-    ├── character_power.md    # 角色战力
-    ├── progression_systems.md# 养成系统
-    ├── scenes/               # 自定义场景目录（可选）
-    │   ├── INDEX.md          #   自定义场景索引
-    │   ├── my_scene.md       #   用户自定义场景文件
+    ├── INDEX.md                    # 项目知识包入口索引
+    ├── 系统资料/                    # 系统策划/数值策划相关
+    │   ├── INDEX.md
+    │   ├── attribute_system.md     # 属性体系
+    │   ├── character_power.md      # 角色战力
+    │   └── progression_systems.md  # 养成系统
+    ├── 战斗资料/                    # 战斗策划相关（建议项）
+    │   ├── INDEX.md
+    │   └── combat_formulas.md      # 战斗公式
+    ├── 数据资料/                    # 数据/经济相关（建议项）
+    │   ├── INDEX.md
+    │   └── economy_system.md       # 经济系统
+    ├── 文案资料/                    # 文案策划相关
+    │   ├── INDEX.md
+    │   └── tone_and_voice.md       # Tone & Voice 规范
+    ├── 关卡资料/                    # 关卡策划相关（建议项）
+    │   ├── INDEX.md
+    │   └── level_structure.md      # 关卡结构
+    ├── scenes/                     # 自定义场景目录（可选）
+    │   ├── INDEX.md
+    │   ├── system-designer/
+    │   │   ├── INDEX.md
+    │   │   └── my_scene.md
     │   └── ...
     └── ...
 ```
 
-**加载方式**：Skill 启动时读取 `user_state.yaml` 中的 `project_knowledge_path`，从该路径加载项目专属知识库（含知识文件及 `scenes/` 目录下的自定义场景）。若路径未设置或目录不存在，提示用户初始化项目绑定。
+**加载方式**：Skill 启动时读取 `user_state.yaml` 中的 `project_knowledge_path`，从该路径加载项目专属知识库（含各子目录下的知识文件及 `scenes/` 目录下的自定义场景）。知识文件可按二级目录自由分类（如系统资料、战斗资料等），不影响加载逻辑。若路径未设置或目录不存在，提示用户初始化项目绑定。
 
 ### 加载优先级与切片策略
 
@@ -166,7 +181,7 @@ references/game_context/
 
 | 优先级 | 层级 | 目录 | 加载策略 |
 |---|---|---|---|
-| **P0** | 项目专属知识包 | 由 `user_state.yaml` 中的 `project_knowledge_path` 指定的外部目录 | **关键词匹配切片**：从用户指定的外部路径加载，按关键词匹配段落。若该目录下存在 `scenes/{current_role}/INDEX.md`，加载该角色的自定义场景文件（按角色子目录分类） |
+| **P0** | 项目专属知识包 | 由 `user_state.yaml` 中的 `project_knowledge_path` 指定的外部目录 | **关键词匹配切片**：递归扫描该目录下所有 Markdown 文件（含二级子目录，如系统资料/、战斗资料/等），按关键词匹配段落加载。若存在 `scenes/{current_role}/INDEX.md`，同时加载该角色的自定义场景文件 |
 | **P1** | 项目配置 | `user_state.yaml` 中的 `project_type` + `project_theme` | **摘要加载**：根据配置的游戏类型和题材标识，加载对应通用知识库的摘要 |
 | **P2** | 交叉矩阵 | `cross_matrix/` | **条件加载**：仅当用户 query 同时涉及类型和题材特征时加载 |
 | **P3** | 通用系统知识库 | `systems/` | **按需切片加载**：根据用户query关键词，只加载对应系统文件的对应段落（如提到"抽卡概率"只加载 `04_monetization.md` 的"抽卡系统"段落） |
