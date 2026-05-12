@@ -23,6 +23,7 @@
 | `combat_formulas.md` | 战斗公式（建议项） | 数值策划、战斗策划 |
 | `economy_system.md` | 经济系统（建议项） | 数值策划、系统策划 |
 | `level_structure.md` | 关卡结构（建议项） | 关卡策划、系统策划 |
+| `scenes/` | 自定义场景目录 | 不限（根据场景配置关联角色） |
 
 ---
 
@@ -44,3 +45,4 @@
 - [ ] 战斗公式（combat_formulas.md）— 建议项
 - [ ] 经济系统（economy_system.md）— 建议项
 - [ ] 关卡结构（level_structure.md）— 建议项
+- [ ] 自定义场景（scenes/INDEX.md）

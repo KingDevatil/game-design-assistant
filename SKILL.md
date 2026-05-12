@@ -146,13 +146,19 @@ references/game_context/
 # 示例结构：
 {user_workspace}/
 └── {project_name}/
-    ├── INDEX.md
-    ├── attribute_system.md
-    ├── character_power.md
-    └── progression_systems.md
+    ├── INDEX.md              # 项目知识包入口索引
+    ├── tone_and_voice.md     # Tone & Voice 规范
+    ├── attribute_system.md   # 属性体系
+    ├── character_power.md    # 角色战力
+    ├── progression_systems.md# 养成系统
+    ├── scenes/               # 自定义场景目录（可选）
+    │   ├── INDEX.md          #   自定义场景索引
+    │   ├── my_scene.md       #   用户自定义场景文件
+    │   └── ...
+    └── ...
 ```
 
-**加载方式**：Skill 启动时读取 `user_state.yaml` 中的 `project_knowledge_path`，从该路径加载项目专属知识库。若路径未设置或目录不存在，提示用户初始化项目绑定。
+**加载方式**：Skill 启动时读取 `user_state.yaml` 中的 `project_knowledge_path`，从该路径加载项目专属知识库（含知识文件及 `scenes/` 目录下的自定义场景）。若路径未设置或目录不存在，提示用户初始化项目绑定。
 
 ### 加载优先级与切片策略
 
@@ -160,7 +166,7 @@ references/game_context/
 
 | 优先级 | 层级 | 目录 | 加载策略 |
 |---|---|---|---|
-| **P0** | 项目专属知识包 | 由 `user_state.yaml` 中的 `project_knowledge_path` 指定的外部目录 | **关键词匹配切片**：从用户指定的外部路径加载，按关键词匹配段落 |
+| **P0** | 项目专属知识包 | 由 `user_state.yaml` 中的 `project_knowledge_path` 指定的外部目录 | **关键词匹配切片**：从用户指定的外部路径加载，按关键词匹配段落。若该目录下存在 `scenes/INDEX.md`，则加载自定义场景索引及对应场景文件 |
 | **P1** | 项目配置 | `user_state.yaml` 中的 `project_type` + `project_theme` | **摘要加载**：根据配置的游戏类型和题材标识，加载对应通用知识库的摘要 |
 | **P2** | 交叉矩阵 | `cross_matrix/` | **条件加载**：仅当用户 query 同时涉及类型和题材特征时加载 |
 | **P3** | 通用系统知识库 | `systems/` | **按需切片加载**：根据用户query关键词，只加载对应系统文件的对应段落（如提到"抽卡概率"只加载 `04_monetization.md` 的"抽卡系统"段落） |
@@ -204,16 +210,50 @@ references/game_context/
 **项目切换**：
 用户可通过修改 `user_state.yaml` 中的 `project_knowledge_path` 指向其他项目知识包目录。切换后 Skill 重新加载对应 P0 层内容。
 
+### 自定义场景（项目专属）
+
+用户可在项目知识包中定义**自定义场景**，扩展 Skill 的能力覆盖到项目特有的工作场景。自定义场景不写入 Skill 本体，完全外挂在项目知识包中。
+
+**目录位置**：
+```
+{project_knowledge_path}/
+└── scenes/
+    ├── INDEX.md         # 自定义场景索引（声明所有自定义场景）
+    └── my_scene.md      # 场景定义文件（可多个）
+```
+
+**索引格式**（`scenes/INDEX.md`）：
+| 场景ID | 名称 | 关联角色 | 触发关键词 | 描述 |
+|--------|------|----------|-----------|------|
+| `{id}` | {名称} | `{role_id}` | {关键词} | {描述} |
+
+**加载规则**：
+1. Skill 绑定项目知识包时，检查 `{project_knowledge_path}/scenes/INDEX.md` 是否存在
+2. 若存在，读取索引并加载所有已声明的场景文件
+3. 自定义场景加入当前角色的场景匹配候选集
+4. **优先级**：自定义场景与内置场景 ID 冲突时，**以自定义场景为准**（P0 级覆盖）
+
+**使用限制**：
+- 自定义场景不修改 Skill 本体中的任何文件
+- 每个自定义场景文件需遵循与内置场景相同的结构规范（Scene ID / 目的 / 输入模板 / 处理逻辑 / 输出规范 / 自检清单）
+- 场景 ID 建议使用有意义的英文标识（如 `CBT-boss_design`），避免与内置场景 ID 混淆
+
 ## 子模块加载
 
-基于 `config.yaml` 中的角色定义和 `user_state.yaml` 中的 `current_role`，从 `references/prompts/{role}/` 加载对应子模块：
+基于 `config.yaml` 中的角色定义和 `user_state.yaml` 中的 `current_role`，从 `references/prompts/{role}/` 加载对应子模块，并合并项目知识包中的自定义场景：
 
 1. 加载 `references/prompts/{current_role}/system.md` — 角色的系统提示
-2. 加载 `references/prompts/{current_role}/scenes/` 中所有激活状态的场景（场景文件中已嵌入输出模板内容）
+2. 加载 `references/prompts/{current_role}/scenes/` 中所有激活状态的内置场景
+3. 若已绑定项目知识包，从 `{project_knowledge_path}/scenes/INDEX.md` 加载自定义场景索引，并加载所有声明的自定义场景文件
+4. 自定义场景与内置场景合并为当前角色的完整场景候选集
 
 ### 场景激活
 
 每个角色的场景在其系统提示或配置中定义。只加载标记为 `active` 的场景。标记为 `pending` 的场景可用但默认不加载。
+
+### 自定义场景匹配
+
+场景匹配时，优先尝试匹配自定义场景（因其优先级更高，同 ID 情况下覆盖内置场景），再匹配内置场景。匹配基于用户 query 的关键词与场景描述、触发关键词。
 
 ## 引导式对话原则（Grilling Protocol）
 
@@ -265,9 +305,10 @@ references/game_context/
 1. 读取 `user_state.yaml` 检查 `current_role`
 2. 如果缺失，发起角色选择对话
 3. 从 `references/prompts/{current_role}/system.md` 加载角色专属系统提示
-4. 根据用户 query 关键词，按切片策略加载共享知识库（`references/game_context/`）
-5. 识别用户请求匹配当前角色的哪个场景
-6. 如果场景不匹配，提示用户切换至更适合的角色
-7. 如果信息不足，提出引导式问题
-8. 执行场景工作流程，使用对应模板产出输出
-9. 运行输出质量自检（由场景文件中的质量自检清单控制）
+4. 根据切片策略加载共享知识库（`references/game_context/`）
+5. 若已绑定项目知识包，加载项目自定义场景（`{project_knowledge_path}/scenes/`）
+6. 识别用户请求匹配当前角色的哪个场景（优先匹配自定义场景，再匹配内置场景）
+7. 如果场景不匹配，提示用户切换至更适合的角色
+8. 如果信息不足，提出引导式问题
+9. 执行场景工作流程，使用对应模板产出输出
+10. 运行输出质量自检（由场景文件中的质量自检清单控制）
