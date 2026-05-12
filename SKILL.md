@@ -166,7 +166,7 @@ references/game_context/
 
 | 优先级 | 层级 | 目录 | 加载策略 |
 |---|---|---|---|
-| **P0** | 项目专属知识包 | 由 `user_state.yaml` 中的 `project_knowledge_path` 指定的外部目录 | **关键词匹配切片**：从用户指定的外部路径加载，按关键词匹配段落。若该目录下存在 `scenes/INDEX.md`，则加载自定义场景索引及对应场景文件 |
+| **P0** | 项目专属知识包 | 由 `user_state.yaml` 中的 `project_knowledge_path` 指定的外部目录 | **关键词匹配切片**：从用户指定的外部路径加载，按关键词匹配段落。若该目录下存在 `scenes/{current_role}/INDEX.md`，加载该角色的自定义场景文件（按角色子目录分类） |
 | **P1** | 项目配置 | `user_state.yaml` 中的 `project_type` + `project_theme` | **摘要加载**：根据配置的游戏类型和题材标识，加载对应通用知识库的摘要 |
 | **P2** | 交叉矩阵 | `cross_matrix/` | **条件加载**：仅当用户 query 同时涉及类型和题材特征时加载 |
 | **P3** | 通用系统知识库 | `systems/` | **按需切片加载**：根据用户query关键词，只加载对应系统文件的对应段落（如提到"抽卡概率"只加载 `04_monetization.md` 的"抽卡系统"段落） |
@@ -218,19 +218,29 @@ references/game_context/
 ```
 {project_knowledge_path}/
 └── scenes/
-    ├── INDEX.md         # 自定义场景索引（声明所有自定义场景）
-    └── my_scene.md      # 场景定义文件（可多个）
+    ├── INDEX.md                    # 全局索引：说明按角色分类规则
+    ├── system-designer/            # 系统策划自定义场景
+    │   ├── INDEX.md                #   该角色场景索引
+    │   └── {scene_id}.md           #   场景定义文件
+    ├── writer/                     # 文案策划
+    ├── balance-designer/           # 数值策划
+    ├── level-designer/             # 关卡策划
+    ├── combat-designer/            # 战斗策划
+    ├── event-designer/             # 活动策划
+    └── data-analyst/               # 数据分析师
 ```
 
-**索引格式**（`scenes/INDEX.md`）：
-| 场景ID | 名称 | 关联角色 | 触发关键词 | 描述 |
-|--------|------|----------|-----------|------|
-| `{id}` | {名称} | `{role_id}` | {关键词} | {描述} |
+**角色子目录索引格式**（每个 `scenes/{role}/INDEX.md`）：
+| 场景ID | 名称 | 触发关键词 | 描述 |
+|--------|------|-----------|------|
+| `{id}` | {名称} | {关键词} | {描述} |
+
+> 索引中不再需要"关联角色"字段——目录名已标识角色归属。
 
 **加载规则**：
-1. Skill 绑定项目知识包时，检查 `{project_knowledge_path}/scenes/INDEX.md` 是否存在
-2. 若存在，读取索引并加载所有已声明的场景文件
-3. 自定义场景加入当前角色的场景匹配候选集
+1. Skill 绑定项目知识包时，检查 `{project_knowledge_path}/scenes/` 下是否存在角色子目录
+2. 遍历所有角色子目录，读取其中的 `INDEX.md`，加载所有已声明的自定义场景文件
+3. 仅将**当前角色**的自定义场景加入场景匹配候选集（按目录角色过滤）
 4. **优先级**：自定义场景与内置场景 ID 冲突时，**以自定义场景为准**（P0 级覆盖）
 
 **使用限制**：
@@ -244,7 +254,7 @@ references/game_context/
 
 1. 加载 `references/prompts/{current_role}/system.md` — 角色的系统提示
 2. 加载 `references/prompts/{current_role}/scenes/` 中所有激活状态的内置场景
-3. 若已绑定项目知识包，从 `{project_knowledge_path}/scenes/INDEX.md` 加载自定义场景索引，并加载所有声明的自定义场景文件
+3. 若已绑定项目知识包，遍历 `{project_knowledge_path}/scenes/{current_role}/INDEX.md` 加载当前角色的自定义场景文件（按角色子目录过滤，只加载当前角色所属场景）
 4. 自定义场景与内置场景合并为当前角色的完整场景候选集
 
 ### 场景激活
