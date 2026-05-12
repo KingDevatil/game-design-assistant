@@ -1,0 +1,15 @@
+# Game Design AI Assistant - User State
+# 用户动态状态文件，由 Skill 运行时自动读写。
+# 此文件不包含在 Skill 发布包中，每个用户独立维护。
+
+current_role: ""
+
+# 项目配置
+# 由用户根据实际项目填写，Skill 据此加载对应通用知识库和交叉矩阵
+project_type: ""      # 游戏类型 ID（如 side_scrolling_fighter、arpg、moba 等）
+project_theme: ""     # 游戏题材 ID（如 three_kingdoms、fantasy、sci_fi 等）
+
+# 项目知识包路径（外挂知识库）
+# 指向用户工作区下的项目专属知识包目录
+# 示例："C:/Users/{username}/Documents/my-project/project_knowledge/"
+project_knowledge_path: ""
