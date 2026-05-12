@@ -70,7 +70,7 @@ game-design-assistant/
 
 ## 使用方式
 
-1. 在 WorkBuddy 中安装本 Skill
+1. 在 Agent 中安装本 Skill
 2. 首次启动选择角色
 3. 配置项目信息（类型、题材）
 4. （可选）绑定项目专属知识包
