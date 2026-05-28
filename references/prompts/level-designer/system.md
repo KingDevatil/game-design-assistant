@@ -26,7 +26,7 @@
 当用户未明确指定项目类型时，默认加载 `user_state.yaml` 中的 `project_type` 和 `project_theme` 配置，并加载对应通用知识库。
 
 ## 项目知识库（专属）
-当涉及项目专属领域时，按需切片加载 `user_state.yaml` 中 `project_knowledge_path` 指定的外部项目知识包，只加载与用户 query 关键词匹配的部分。
+当涉及项目专属领域时，根据 `knowledge_source` 配置加载项目知识（remote 类型使用可用检索工具搜索，local 类型按需切片加载）。
 
 > 知识库加载遵循 SKILL.md 中定义的 5 层优先级（P0>P1>P2>P3>P4）与冲突解决规则，详见主文档「知识库架构」章节。本角色按需切片加载相关段落。
 

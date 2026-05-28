@@ -8,7 +8,7 @@
 >
 > | 优先级 | 层级 | 来源 | 说明 |
 > |---|---|---|---|
-> | **P0** | 项目专属知识包 | 由 `user_state.yaml` 中的 `project_knowledge_path` 指定的外部目录 | 当前项目具体规则，最高权威。路径指向用户工作区下的项目知识包 |
+> | **P0** | 项目专属知识 | 由 `user_state.yaml` 中的 `knowledge_source` 配置，支持 local（本地文件）/ remote（远程知识库）/ none（无） | 当前项目具体规则，最高权威 |
 > | **P1** | 项目配置 | `user_state.yaml` 中的 `project_type` + `project_theme` | 当前项目类型、题材标识，用于加载对应通用知识库 |
 > | **P2** | 交叉矩阵 | `cross_matrix/` | 类型×题材专门矩阵，优先于单独类型/题材 |
 > | **P3** | 通用系统知识库 | `systems/` | 通用系统设计参考 |
@@ -87,7 +87,7 @@
 
 ## 项目专属知识包（外挂）
 
-项目专属知识包位于**用户工作区**下的独立目录中，与 Skill 本体**完全物理分离**。具体路径由 `user_state.yaml` 中的 `project_knowledge_path` 指定。
+项目专属知识可存储为**本地文件**或**远程知识库**，与 Skill 本体**完全物理分离**。具体由 `user_state.yaml` 中的 `knowledge_source` 配置指定。
 
 首次使用时，Skill 会引导用户初始化项目知识包路径。
 

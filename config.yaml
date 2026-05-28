@@ -331,8 +331,15 @@ knowledge_base:
   cross_matrix_dir: "references/game_context/cross_matrix/"
   systems_dir: "references/game_context/systems/"
   # 项目配置（类型/题材）由 user_state.yaml 中的 project_type / project_theme 指定
-  # 项目知识包路径由 user_state.yaml 中的 project_knowledge_path 指定
+  # 项目知识来源由 user_state.yaml 中的 knowledge_source 指定
   # 不在这里硬编码任何项目相关路径，以实现 Skill 本体与项目数据的完全分离
+
+  # 知识来源默认配置
+  # 详细配置在 user_state.yaml 中由用户按需设置
+  project_knowledge:
+    # 支持来源类型: local（本地文件）/ remote（远程知识库）/ none（无）
+    default_type: "none"
+    # remote 类型时，Agent 自动发现环境中可用的检索工具，不绑定具体服务
 
 # Model configuration (applies to all roles)
 # Note: provider/model are determined by the runtime environment.

@@ -96,7 +96,19 @@ data-analyst 直接输出结构化分析报告。
 
 ## 知识库架构
 
-所有角色共享位于 `references/game_context/` 的**通用知识库**，以及通过 `user_state.yaml` 中 `project_knowledge_path` 指定的**项目专属知识包**：
+所有角色共享位于 `references/game_context/` 的**通用知识库**，以及通过 `user_state.yaml` 中 `knowledge_source` 配置的**项目专属知识**：
+
+### 知识来源配置（泛化抽象）
+
+项目知识来源在 `user_state.yaml` 中通过 `knowledge_source` 配置，支持三种类型：
+
+| 类型 | 说明 | 项目知识加载方式 |
+|------|------|----------------|
+| `local` | 本地文件 | 从 `knowledge_source.local.path` 加载项目知识包目录 |
+| `remote` | 远程知识库 | Agent 运行时自动发现环境中可用的检索工具（如 MCP 知识库），通过语义搜索获取项目资料。不绑定具体工具或服务地址 |
+| `none` | 无项目资料 | 仅使用 Skill 内置通用知识库 |
+
+**remote 类型**：Skill 不在配置中硬编码任何 MCP 工具名或服务地址。运行时的 Agent 根据环境自动发现可用的知识检索工具（如 `search_knowledge`、`get_document`、`list_documents` 等），使用 `knowledge_source.remote.root_path` 作为检索范围。
 
 ### 通用知识库（Skill 内部）
 
@@ -173,7 +185,12 @@ references/game_context/
     └── ...
 ```
 
-**加载方式**：Skill 启动时读取 `user_state.yaml` 中的 `project_knowledge_path`，递归加载该路径下各子目录的 `INDEX.md` 索引文件，建立知识库文件清单。之后根据用户 query 关键词匹配到对应文件后，按需切片加载具体内容。知识文件可按二级目录自由分类（如系统资料、战斗资料等），不影响加载逻辑。若路径未设置或目录不存在，提示用户初始化项目绑定。
+**加载方式**：Skill 启动时读取 `user_state.yaml` 中的 `knowledge_source` 配置：
+- `local`：递归加载 `knowledge_source.local.path` 下各子目录的 `INDEX.md` 索引文件，建立知识库文件清单。之后根据用户 query 关键词匹配到对应文件后，按需切片加载具体内容。
+- `remote`：Agent 使用环境中可用的检索工具，以 `knowledge_source.remote.root_path` 为范围检索项目资料。**读自动**——初始化时自动检索项目全貌，设计时按需搜索相关文档。
+- `none`：跳过项目知识加载，仅使用通用知识库。
+
+若 `local` 路径未设置或目录不存在，提示用户初始化项目绑定。
 
 ### 加载优先级与切片策略
 
@@ -181,7 +198,7 @@ references/game_context/
 
 | 优先级 | 层级 | 目录 | 加载策略 |
 |---|---|---|---|
-| **P0** | 项目专属知识包 | 由 `user_state.yaml` 中的 `project_knowledge_path` 指定的外部目录 | **索引优先 + 按需切片**：先递归加载各子目录下的 `INDEX.md` 索引文件，建立文件清单。根据用户 query 关键词匹配到对应文件后，按需切片加载具体段落。若存在 `scenes/{current_role}/INDEX.md`，同时按角色加载自定义场景 |
+| **P0** | 项目专属知识 | 由 `user_state.yaml` 中的 `knowledge_source` 配置，支持 local（本地文件）/ remote（远程知识库）/ none（无） | **知识驱动 + 按需检索**：local 类型递归加载各子目录下的 `INDEX.md` 索引文件，按需切片加载具体段落。remote 类型使用环境中可用的检索工具（如 `search_knowledge`、`get_document`），以 `root_path` 为范围按需检索。若存在 `scenes/{current_role}/INDEX.md`，同时按角色加载自定义场景 |
 | **P1** | 项目配置 | `user_state.yaml` 中的 `project_type` + `project_theme` | **摘要加载**：根据配置的游戏类型和题材标识，加载对应通用知识库的摘要 |
 | **P2** | 交叉矩阵 | `cross_matrix/` | **条件加载**：仅当用户 query 同时涉及类型和题材特征时加载 |
 | **P3** | 通用系统知识库 | `systems/` | **按需切片加载**：根据用户query关键词，只加载对应系统文件的对应段落（如提到"抽卡概率"只加载 `04_monetization.md` 的"抽卡系统"段落） |
@@ -203,7 +220,7 @@ references/game_context/
 **注意**：Skill不得擅自修改或增删P0项目专属知识库中已定义的项目规则。
 
 **切片加载示例**：
-- 用户问"抽卡概率怎么设计" → 加载 `systems/04_monetization.md` 中的"抽卡/祈愿系统"段落 + `{project_knowledge_path}/attribute_system.md` 中的"稀有度定义"段落（`project_knowledge_path` 来自 `user_state.yaml`）
+- 用户问"抽卡概率怎么设计" → 加载 `systems/04_monetization.md` 中的"抽卡/祈愿系统"段落 + 检索项目知识中的"稀有度定义"
 - 用户问"装备强化" → 加载 `systems/02_progression.md` 中的"装备/圣遗物系统"段落
 - 用户问"公会战" → 加载 `systems/05_social.md` 中的"公会/社团系统"段落
 - 用户问"世界观设定" → 加载 `themes/{project_theme}.md` 摘要（`project_theme` 来自 `user_state.yaml`）
@@ -211,19 +228,25 @@ references/game_context/
 
 **按需切片**：根据用户 query 关键词匹配对应系统文件的具体章节，避免全量加载
 
-### 项目知识包绑定与初始化
+### 项目知识绑定与初始化
 
 **绑定流程**：
-1. Skill 启动时读取 `user_state.yaml` 中的 `project_knowledge_path`
-2. 检查该路径是否存在且包含有效的项目知识库文件（如 `INDEX.md`）
-3. 若存在 → 正常加载 P0 层知识库
-4. 若不存在 → 引导用户初始化：
+1. Skill 启动时读取 `user_state.yaml` 中的 `knowledge_source` 配置
+2. 根据 `knowledge_source.type` 执行对应逻辑：
+   - `local`：检查 `knowledge_source.local.path` 是否有效
+   - `remote`：Agent 使用可用检索工具探索 `knowledge_source.remote.root_path`
+   - `none`：跳过项目知识加载
+3. 若类型为 `local` 且路径无效 → 引导用户初始化：
    - **选项A**：指定已有知识包目录的绝对路径
    - **选项B**：从模板创建新知识包（复制 `template/` 到用户指定路径）
-   - **选项C**：暂不绑定（P0 层为空，仅使用 P1-P4 通用知识库）
+   - **选项C**：切换为 `remote` 或 `none` 类型
+   - **选项D**：暂不绑定（P0 层为空，仅使用 P1-P4 通用知识库）
 
 **项目切换**：
-用户可通过修改 `user_state.yaml` 中的 `project_knowledge_path` 指向其他项目知识包目录。切换后 Skill 重新加载对应 P0 层内容。
+用户可通过修改 `user_state.yaml` 中的 `knowledge_source` 配置切换知识来源。切换后 Skill 重新加载对应 P0 层内容。
+
+**remote 类型初始化**：
+Agent 初始化时自动检索 `root_path` 下的目录结构和文档列表，了解项目资料全貌，后续按需精确检索。不需要用户手动指定任何 MCP 工具名或服务地址。
 
 ### 自定义场景（项目专属）
 
@@ -329,11 +352,35 @@ references/game_context/
 
 1. 读取 `user_state.yaml` 检查 `current_role`
 2. 如果缺失，发起角色选择对话
-3. 从 `references/prompts/{current_role}/system.md` 加载角色专属系统提示
-4. 根据切片策略加载共享知识库（`references/game_context/`）
-5. 若已绑定项目知识包，加载项目自定义场景（`{project_knowledge_path}/scenes/`）
-6. 识别用户请求匹配当前角色的哪个场景（优先匹配自定义场景，再匹配内置场景）
-7. 如果场景不匹配，提示用户切换至更适合的角色
-8. 如果信息不足，提出引导式问题
-9. 执行场景工作流程，使用对应模板产出输出
-10. 运行输出质量自检（由场景文件中的质量自检清单控制）
+3. 读取 `knowledge_source` 配置，根据类型加载项目知识：
+   - `remote`：Agent 自动检索 `root_path` 下的目录结构和文档列表，了解项目资料全貌
+   - `local`：读取本地项目知识包索引
+   - `none`：跳过
+4. 从 `references/prompts/{current_role}/system.md` 加载角色专属系统提示
+5. 根据切片策略加载通用知识库（`references/game_context/`）
+6. 若已绑定项目知识，加载项目自定义场景（`{project_knowledge_path}/scenes/`）
+7. 识别用户请求匹配当前角色的哪个场景（优先匹配自定义场景，再匹配内置场景）
+8. 如果场景不匹配，提示用户切换至更适合的角色
+9. 如果信息不足，提出引导式问题
+10. 执行场景工作流程，使用对应模板产出输出
+11. 运行输出质量自检（由场景文件中的质量自检清单控制）
+
+### 设计前上下文加载
+
+在进入场景设计流程前，根据 `knowledge_source` 配置检索相关资料：
+- `remote`：使用可用检索工具，以设计主题为查询词搜索项目知识，将相关文档的核心信息作为设计约束基线
+- `local`：按需切片加载本地项目知识中与设计主题相关的文件
+- `none`：跳过自动检索，仅基于当前对话上下文
+
+### 产出回写引导
+
+设计完成后，整理产出内容。**读自动、写确认**——写入操作必须经用户确认：
+
+| 操作 | 规则 | 原因 |
+|------|------|------|
+| 读取已有资料 | 自动执行，无需确认 | 只读操作，不破坏数据 |
+| **写入/更新知识库** | **必须用户确认** | 共享知识库多人共用，随意写入会污染知识检索质量 |
+| 补充缺失的既定事实 | 先提示用户确认，确认后写入 | 如：系统参数、规则约束等文档中漏写的事实内容 |
+| 设计方案/讨论产物 | **不写入** | 未落地的计划文档、讨论结果不属于既定事实 |
+
+> **判断标准**：文档里应该有但漏写了 → 可提示补充；这是讨论出来的新想法/方案 → 不写。

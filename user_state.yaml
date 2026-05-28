@@ -9,7 +9,26 @@ current_role: ""
 project_type: ""      # 游戏类型 ID（如 side_scrolling_fighter、arpg、moba 等）
 project_theme: ""     # 游戏题材 ID（如 three_kingdoms、fantasy、sci_fi 等）
 
-# 项目知识包路径（外挂知识库）
-# 指向用户工作区下的项目专属知识包目录
-# 示例："C:/Users/{username}/Documents/my-project/project_knowledge/"
-project_knowledge_path: ""
+# ============================================
+# 项目知识来源配置（泛化抽象，适配不同环境）
+# ============================================
+knowledge_source:
+  # 知识来源类型："local" | "remote" | "none"
+  # - local:  项目资料为本地文件（通过 project_knowledge_path 指定目录）
+  # - remote: 项目资料存储在远程知识库中（Agent 运行时自动发现可用检索工具）
+  # - none:   无项目资料，仅使用 Skill 内置通用知识库
+  type: "local"
+
+  # type=local 时的配置
+  local:
+    # 项目知识包路径（外挂知识库）
+    # 指向用户工作区下的项目专属知识包目录
+    # 示例："C:/Users/{username}/Documents/my-project/project_knowledge/"
+    path: ""
+
+  # type=remote 时的配置
+  remote:
+    # 项目资料在远程存储中的根路径（如 "项目资料"）
+    # Skill 不绑定具体工具或服务地址，Agent 运行时自动发现可用的检索工具
+    # 示例：MCP knowledge-base 的 search_knowledge/get_document 等
+    root_path: ""
