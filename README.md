@@ -1,6 +1,6 @@
 # Game Design AI Assistant / 游戏策划AI助手
 
-一个支持 **6 个专业策划岗位** + **1 个跨角色数据分析子技能**的统一游戏策划 AI 助手，基于 WorkBuddy Skill 体系构建。
+一个支持 **6 个专业策划岗位** + **1 个跨角色数据分析子技能**的统一游戏策划 AI 助手。
 
 ## 角色系统
 
@@ -18,65 +18,73 @@
 
 ## 知识库架构
 
-### 5 层优先级
+采用 **索引优先 + 按需切片** 的加载策略。不预先加载完整文件，而是先加载索引建立文件清单，再根据用户 query 关键词按需加载具体段落。
 
-采用 **索引优先 + 按需切片** 的加载策略。不预先加载完整文件，而是先加载索引建立文件清单，再根据用户 query 关键词按需切片加载具体段落：
-
-| 优先级 | 层级 | 说明 | 加载策略 |
-|--------|------|------|---------|
-| **P0** | 项目专属知识包 | 外挂的项目配置与知识文件（支持二级目录分类） | 索引优先：递归加载 INDEX.md → 按需切片加载具体文件 |
-| **P1** | 项目配置 | `user_state.yaml` 中的游戏类型/题材 | 摘要加载 |
-| **P2** | 交叉矩阵 | 类型×题材的专门设计 | 条件触发加载 |
-| **P3** | 通用系统知识库 | 7 大游戏系统 | 按需切片加载 |
-| **P4** | 通用类型/题材 | 13 种游戏类型 + 9 种题材 | 基础摘要加载 |
+| 优先级 | 层级 | 说明 |
+|--------|------|------|
+| **P0** | 项目专属知识 | 由 `knowledge_source` 配置（详见下方说明），支持 local/remote/none 三种来源 |
+| **P1** | 项目配置 | `user_state.yaml` 中的游戏类型/题材 |
+| **P2** | 交叉矩阵 | 类型×题材的专门设计 |
+| **P3** | 通用系统知识库 | 7 大游戏系统 |
+| **P4** | 通用类型/题材 | 13 种游戏类型 + 9 种题材 |
 
 **冲突解决**：高层级覆盖低层级，同层级可共存互补。
 
-### 项目知识包（外挂）
+### 项目知识（P0 层）
 
-项目专属知识文件与 Skill 本体完全分离，支持按二级目录自由分类：
+项目专属知识在 `user_state.yaml` 中通过 `knowledge_source` 配置，支持三种来源，不绑定具体存储载体：
+
+| 类型 | 说明 | 适用场景 |
+|------|------|---------|
+| `local` | 本地文件目录，由 `local.path` 指定路径 | 项目资料为本地 markdown 文件 |
+| `remote` | 远程知识库，由 `remote.root_path` 指定检索范围 | 项目资料存储在 MCP 知识库、飞书文档等远程服务中 |
+| `none` | 无项目资料 | 仅使用 Skill 内置通用知识库 |
+
+- **`remote` 类型**：Agent 运行时自动发现环境中可用的知识检索工具（如 MCP 的 `search_knowledge`、`get_document` 等），不需要在 skill 配置中硬编码特定服务地址
+- 项目知识支持自定义场景扩展：`scenes/{角色ID}/` 目录下定义项目特有工作场景，P0 级覆盖内置场景
+
+### 通用知识库（Skill 内置）
 
 ```
-{项目知识包根目录}/
-├── INDEX.md                    # 入口索引
-├── 系统资料/                    # 系统/数值策划相关
-│   ├── INDEX.md
-│   ├── attribute_system.md     # 属性体系
-│   ├── character_power.md      # 角色战力
-│   └── progression_systems.md  # 养成系统
-├── 战斗资料/                    # 战斗策划相关
-│   ├── INDEX.md
-│   └── combat_formulas.md      # 战斗公式
-├── 数据资料/                    # 数据/经济相关
-│   ├── INDEX.md
-│   └── economy_system.md       # 经济系统
-├── 文案资料/                    # 文案策划相关
-│   ├── INDEX.md
-│   └── tone_and_voice.md       # 语气与文风规范
-├── 关卡资料/                    # 关卡策划相关
-│   ├── INDEX.md
-│   └── level_structure.md      # 关卡结构
-└── scenes/                     # 自定义场景（可选）
-    ├── INDEX.md                # 分类规则说明
-    ├── system-designer/        # 系统策划自定义场景
-    │   ├── INDEX.md
-    │   └── my_scene.md
-    ├── combat-designer/        # 战斗策划自定义场景
-    └── ...                     # 其他角色
+references/game_context/
+├── game_types/              # 13 种游戏类型
+├── themes/                  # 9 种游戏题材
+├── systems/                 # 7 大游戏系统（核心玩法、养成、经济、商业化、社交、运营、基础功能）
+└── cross_matrix/            # 类型×题材交叉矩阵
 ```
 
-- **知识文件**：按目录分类放置（系统资料/战斗资料/数据资料/文案资料/关卡资料），每个目录有 INDEX.md 索引
-- **自定义场景**：`scenes/{角色ID}/` 目录下定义项目特有的工作场景，P0 级覆盖内置场景
-- **加载机制**：优先加载 INDEX.md 索引 → 按用户 query 按需切片加载具体文件
+## 读写规则
+
+| 操作 | 原则 |
+|------|------|
+| **读取** | 自动执行——设计前自动检索已有项目资料，了解约束条件 |
+| **写入** | 需用户确认——共享知识库多人共用，随意写入会降低检索质量 |
+| **补充事实** | 可提示用户确认后补充（文档漏写的既定事实，如系统参数、规则约束） |
+| **设计方案** | 不写入——讨论产出的新方案、未落地的计划不写入共享知识库 |
 
 ## 配置方式
 
 Skill 采用**两层配置分离**：
 
-- **`config.yaml`** — 静态模板，定义角色、场景、知识库路径（随 Skill 发布）
-- **`user_state.yaml`** — 用户动态状态，记录当前角色和项目配置（本地独立维护）
+```
+user_state.yaml          # 用户状态（本地独立维护，不随 Skill 发布）
+├── current_role         # 当前角色
+├── project_type         # 游戏类型（如 side_scrolling_fighter）
+├── project_theme        # 游戏题材（如 three_kingdoms）
+└── knowledge_source     # 知识来源配置
+    ├── type             # local / remote / none
+    ├── local.path       # 本地文件路径
+    └── remote.root_path # 远程知识库根路径
 
-首次使用需完成角色选择和项目绑定（游戏类型、题材、项目知识包路径）。
+config.yaml              # 静态模板（随 Skill 发布）
+└── roles                # 角色定义与场景列表
+```
+
+## 使用方式
+
+1. 在 Proma / WorkBuddy 等 Agent 平台中引用本 Skill
+2. 编辑 `user_state.yaml` 配置角色、项目信息和知识来源
+3. 开始使用！输入你的设计需求，AI 会以所选角色的专业视角回应
 
 ## 目录结构
 
@@ -85,46 +93,11 @@ game-design-assistant/
 ├── SKILL.md                          # Skill 运行时主文档
 ├── config.yaml                       # 角色与场景配置模板
 ├── user_state.yaml                   # 用户状态文件（初始化模板）
-├── project_knowledge_template/       # 项目专属知识包模板
-│   ├── INDEX.md                      #   入口索引
-│   ├── 系统资料/                      #   系统/数值策划
-│   │   ├── INDEX.md
-│   │   ├── attribute_system.md
-│   │   ├── character_power.md
-│   │   └── progression_systems.md
-│   ├── 战斗资料/                      #   战斗策划（建议项）
-│   ├── 数据资料/                      #   数据/经济（建议项）
-│   ├── 文案资料/                      #   文案策划
-│   │   ├── INDEX.md
-│   │   └── tone_and_voice.md
-│   ├── 关卡资料/                      #   关卡策划（建议项）
-│   └── scenes/                       #   自定义场景模板
-│       ├── INDEX.md
-│       ├── system-designer/example.md
-│       └── ...                       #   各角色 INDEX.md
+├── project_knowledge_template/       # 本地项目知识包模板
 └── references/
     ├── game_context/                 # 通用知识库
-    │   ├── game_types/               #   13 种游戏类型
-    │   ├── themes/                   #   9 种游戏题材
-    │   ├── systems/                  #   7 大游戏系统
-    │   └── cross_matrix/             #   类型×题材交叉矩阵
-    └── prompts/                      # 角色提示词
-        ├── system-designer/          #   系统策划
-        ├── writer/                   #   文案策划
-        ├── balance-designer/         #   数值策划
-        ├── level-designer/           #   关卡策划
-        ├── combat-designer/          #   战斗策划
-        ├── event-designer/           #   活动策划
-        └── data-analyst/             #   数据分析师
+    └── prompts/                      # 角色提示词（7 个角色）
 ```
-
-## 使用方式
-
-1. 在 WorkBuddy 中安装本 Skill
-2. 首次启动选择角色
-3. 配置项目信息（类型、题材）
-4. （可选）绑定项目专属知识包（含自定义场景）
-5. 开始使用！输入你的设计需求，AI 会以所选角色的专业视角回应
 
 ## License
 
