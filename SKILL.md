@@ -160,22 +160,15 @@ references/game_context/
 └── {project_name}/
     ├── INDEX.md                    # 项目知识包入口索引
     ├── 系统资料/                    # 系统策划/数值策划相关
-    │   ├── INDEX.md
-    │   ├── attribute_system.md     # 属性体系
-    │   ├── character_power.md      # 角色战力
-    │   └── progression_systems.md  # 养成系统
+    │   └── INDEX.md
     ├── 战斗资料/                    # 战斗策划相关（建议项）
-    │   ├── INDEX.md
-    │   └── combat_formulas.md      # 战斗公式
+    │   └── INDEX.md
     ├── 数据资料/                    # 数据/经济相关（建议项）
-    │   ├── INDEX.md
-    │   └── economy_system.md       # 经济系统
+    │   └── INDEX.md
     ├── 文案资料/                    # 文案策划相关
-    │   ├── INDEX.md
-    │   └── tone_and_voice.md       # Tone & Voice 规范
+    │   └── INDEX.md
     ├── 关卡资料/                    # 关卡策划相关（建议项）
-    │   ├── INDEX.md
-    │   └── level_structure.md      # 关卡结构
+    │   └── INDEX.md
     ├── scenes/                     # 自定义场景目录（可选）
     │   ├── INDEX.md
     │   ├── system-designer/
