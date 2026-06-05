@@ -1,10 +1,6 @@
 ---
 name: "game-design-assistant"
 description: "A unified game design AI assistant that supports multiple planning roles (system designer, writer, balance designer, level designer, combat designer, event designer) plus a cross-role data analysis sub-skill with a single entry point. Load this skill when the user needs help with game design, system design, numerical balancing, level design, combat design, copywriting, event planning, or game data analysis."
-allowed_tools:
-  - xlsx
-  - execute_command
-  - web_search
 ---
 
 # 游戏策划AI助手
